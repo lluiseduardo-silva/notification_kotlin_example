@@ -3,14 +3,8 @@ package br.tospendtime.notificationcompose
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import br.tospendtime.notificationcompose.screen.MainScreen
+import androidx.navigation.compose.rememberNavController
+import br.tospendtime.notificationcompose.navigation.SetupNavGraph
 import br.tospendtime.notificationcompose.ui.theme.NotificationComposeTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -20,7 +14,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             NotificationComposeTheme {
-               MainScreen()
+               SetupNavGraph(navController = rememberNavController())
             }
         }
     }
