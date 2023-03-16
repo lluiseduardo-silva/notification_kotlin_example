@@ -1,14 +1,19 @@
 package br.tospendtime.notificationcompose.di
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Build.*
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
+import androidx.core.app.RemoteInput
 import androidx.core.net.toUri
 import br.tospendtime.notificationcompose.MainActivity
 import br.tospendtime.notificationcompose.R
@@ -20,14 +25,16 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Qualifier
 import javax.inject.Singleton
 
-
+const val RESULT_KEY = "RESULT_KEY"
 @Module
 @InstallIn(SingletonComponent::class)
 object NotificationModule {
     @Singleton
     @Provides
+    @MainChannelNotificationCompatBuilder
     fun provideNotificationBuilder(
         @ApplicationContext context: Context
     ): NotificationCompat.Builder {
@@ -79,6 +86,56 @@ object NotificationModule {
             .setContentIntent(clickPendingIntent)
     }
 
+
+    @Singleton
+    @Provides
+    @ChatChannelNotificationCompatBuilder
+    fun provideChatNotificationBuilder(
+        @ApplicationContext context: Context
+    ): NotificationCompat.Builder{
+
+        val flag =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE
+            } else
+                0
+        val remoteInput = RemoteInput.Builder(RESULT_KEY)
+            .setLabel("Type here...")
+            .build()
+        val replyIntent = Intent(context, MyReceiver::class.java)
+        val replyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            1,
+            replyIntent,
+            flag
+        )
+        val replyAction = NotificationCompat.Action.Builder(
+            0,
+            "Reply",
+            replyPendingIntent
+        ).addRemoteInput(remoteInput).build()
+
+        val person = Person.Builder().setName("Johny").build()
+        val notificationStyle = NotificationCompat.MessagingStyle(person)
+            .addMessage("Hi there!", System.currentTimeMillis(), person)
+        return NotificationCompat.Builder(context, "Chat Channel ID")
+            .setSmallIcon(R.drawable.icons8_notification_38___)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setOnlyAlertOnce(true)
+            .setStyle(notificationStyle)
+            .addAction(replyAction)
+    }
+
+
+    @Singleton
+    @Provides
+    @DownloadChannelNotificationCompatBuilder
+    fun provideDownloadNotificationBuilder(@ApplicationContext context:Context):NotificationCompat.Builder{
+        return NotificationCompat.Builder(context, "Download Channel ID")
+            .setSmallIcon(R.drawable.icons8_notification_38___)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+    }
     @Singleton
     @Provides
     fun provideNotificationManager(
@@ -92,8 +149,32 @@ object NotificationModule {
                 NotificationManager.IMPORTANCE_HIGH
             )
 
+            val downloadChannel = NotificationChannel(
+                "Download Channel ID",
+                "Download Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+
+            val chatChannel = NotificationChannel(
+                "Chat Channel ID",
+                "Chat Channel",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+
             notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(downloadChannel)
         }
         return notificationManager
     }
 }
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class MainChannelNotificationCompatBuilder
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class DownloadChannelNotificationCompatBuilder
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ChatChannelNotificationCompatBuilder
